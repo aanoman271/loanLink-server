@@ -81,6 +81,19 @@ async function run() {
       const result = await addLoanCollection.insertOne(addloanData);
       res.send(result);
     });
+    // get maange laons
+    app.get("/manager/manageLoan", verificationToken, async (req, res) => {
+      try {
+        const email = req.token_email;
+        const query = { email: email };
+        const laons = addLoanCollection.find(query).toArray();
+        res.send(laons);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
