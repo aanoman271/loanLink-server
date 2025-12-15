@@ -28,11 +28,11 @@ const verificationToken = async (req, res, next) => {
   if (!token) {
     return res.status(401).send({ message: "unauthorised user" });
   }
-  console.log(token);
   try {
     const decoded = await admin.auth().verifyIdToken(token);
 
-    req.token_email = decoded.email;
+    const token_email = decoded.email;
+    req.decodedEmail = token_email;
 
     next();
   } catch (error) {
@@ -61,7 +61,7 @@ async function run() {
     const addLoanCollection = db.collection("manager-addLoan");
 
     // Send a ping to confirm a successful connection
-    app.post("/users", async (req, res) => {
+    app.post("/users", verificationToken, async (req, res) => {
       const newUser = req.body;
       const email = newUser.email;
       const existsUser = await usercollection.findOne({ email });
@@ -77,21 +77,37 @@ async function run() {
     // add laon
     app.post("/manager/addloan", verificationToken, async (req, res) => {
       const addloanData = req.body;
-      console.log(addloanData);
       const result = await addLoanCollection.insertOne(addloanData);
       res.send(result);
     });
     // get maange laons
-    app.get("/manager/manageLoan", verificationToken, async (req, res) => {
+
+    app.get("/ManageLoan", verificationToken, async (req, res) => {
+      const email = req.decodedEmail;
+      if (!email) {
+        return res
+          .status(500)
+          .send({ message: "Internal server error: Missing decoded email" });
+      }
+      const query = { email: email };
+      const result = await addLoanCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/availableLoans", async (req, res) => {
       try {
-        const email = req.token_email;
-        const query = { email: email };
-        const laons = addLoanCollection.find(query).toArray();
-        res.send(laons);
+        const result = await addLoanCollection.find().limit(6).toArray();
+
+        res.send(result);
       } catch (error) {
         console.error(error);
         res.status(500).send({ message: "Server error" });
       }
+    });
+
+    app.get("/alllaons", async (req, res) => {
+      const cursor = addLoanCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
     });
 
     await client.db("admin").command({ ping: 1 });
