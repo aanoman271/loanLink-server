@@ -40,7 +40,7 @@ const verificationToken = async (req, res, next) => {
   }
 };
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.URI_USER_NAME}:${process.env.URI_PASSWORD}@cluster0.sillvi5.mongodb.net/?appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -83,16 +83,55 @@ async function run() {
     // get maange laons
 
     app.get("/ManageLoan", verificationToken, async (req, res) => {
-      const email = req.decodedEmail;
-      if (!email) {
-        return res
-          .status(500)
-          .send({ message: "Internal server error: Missing decoded email" });
+      try {
+        const email = req.decodedEmail;
+        if (!email) {
+          return res
+            .status(500)
+            .send({ message: "Internal server error: Missing decoded email" });
+        }
+        const query = { email: email };
+        const result = await addLoanCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
       }
-      const query = { email: email };
-      const result = await addLoanCollection.find(query).toArray();
-      res.send(result);
     });
+
+    // updateLaon
+    app.get("/loans/:id", verificationToken, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await addLoanCollection.findOne(query);
+        if (!result) {
+          return res.status(404).send({ message: "Loan not found" });
+        }
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
+    // updated laon
+    app.patch("/loans/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const query = { _id: new ObjectId(id) };
+        const updatedFiled = req.body;
+        const result = await addLoanCollection.updateOne(query, {
+          $set: updatedFiled,
+        });
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
     app.get("/availableLoans", async (req, res) => {
       try {
         const result = await addLoanCollection.find().limit(6).toArray();
