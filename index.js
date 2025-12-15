@@ -131,6 +131,18 @@ async function run() {
         res.status(500).send({ message: "Server error" });
       }
     });
+    // delete Loan
+    app.delete("/loan/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const query = { _id: new ObjectId(id) };
+        const result = await addLoanCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
 
     app.get("/availableLoans", async (req, res) => {
       try {
