@@ -209,6 +209,30 @@ async function run() {
         res.status(500).send({ message: "Server error" });
       }
     });
+
+    // approve laon application
+    app.patch(
+      "/loan-applications/:id/approve",
+      verificationToken,
+      async (req, res) => {
+        try {
+          const { id } = req.params;
+          const result = await loanApplicationCollection.updateOne(
+            { _id: new ObjectId(id) },
+            {
+              $set: {
+                status: "approved",
+                approvedAt: new Date(),
+              },
+            }
+          );
+          res.send(result);
+        } catch (error) {
+          console.error(error);
+          res.status(500).send({ message: "Server error" });
+        }
+      }
+    );
     // pending Loans
     app.get("/pendingLoan", verificationToken, async (req, res) => {
       try {
