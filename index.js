@@ -59,6 +59,7 @@ async function run() {
     const db = client.db("loan_Link");
     const usercollection = db.collection("users");
     const addLoanCollection = db.collection("manager-addLoan");
+    const loanApplicationCollection = db.collection("loan_application");
 
     // Send a ping to confirm a successful connection
     app.post("/users", verificationToken, async (req, res) => {
@@ -115,6 +116,18 @@ async function run() {
         res.status(500).send({ message: "Server error" });
       }
     });
+    // loan deatails
+    app.get("/loanDeatails/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const query = { _id: new ObjectId(id) };
+        const result = await addLoanCollection.findOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
 
     // updated laon
     app.patch("/loans/:id", verificationToken, async (req, res) => {
@@ -159,6 +172,29 @@ async function run() {
       const cursor = addLoanCollection.find();
       const result = await cursor.toArray();
       res.send(result);
+    });
+    // laon appplication post
+    app.post("/loan-applications", verificationToken, async (req, res) => {
+      try {
+        const applicationData = req.body;
+        const { userEmail, loanId } = applicationData;
+        const existsUser = await loanApplicationCollection.findOne({
+          userEmail,
+          loanId,
+        });
+        if (existsUser) {
+          return res
+            .status(409)
+            .send({ message: "Already applided for this loan" });
+        }
+        const result = await loanApplicationCollection.insertOne(
+          applicationData
+        );
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
