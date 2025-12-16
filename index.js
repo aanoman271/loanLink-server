@@ -187,9 +187,35 @@ async function run() {
             .status(409)
             .send({ message: "Already applided for this loan" });
         }
-        const result = await loanApplicationCollection.insertOne(
-          applicationData
-        );
+        const result = await loanApplicationCollection.insertOne({
+          ...applicationData,
+          date: new Date(),
+        });
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+    // application deatial
+    app.get("/loan-application/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const query = { _id: new ObjectId(id) };
+        const result = await loanApplicationCollection.findOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+    // pending Loans
+    app.get("/pendingLoan", verificationToken, async (req, res) => {
+      try {
+        const email = req.query.email;
+        const result = await loanApplicationCollection
+          .find({ Officer_email: email, status: "pending" })
+          .toArray();
         res.send(result);
       } catch (error) {
         console.error(error);
