@@ -62,17 +62,34 @@ async function run() {
     const loanApplicationCollection = db.collection("loan_application");
 
     // Send a ping to confirm a successful connection
-    app.post("/users", verificationToken, async (req, res) => {
+    app.post("/users", async (req, res) => {
       const newUser = req.body;
       const email = newUser.email;
-      const existsUser = await usercollection.findOne({ email });
+      const existsUser = await usercollection.findOne({ email: email });
       if (existsUser) {
-        return res
-          .status(409)
-          .send({ message: "Conflict – resource already exists" });
+        return res.send({ message: "User already exists" });
       }
       const result = await usercollection.insertOne(newUser);
       res.send(result);
+    });
+
+    // get user
+    app.get("/user", verificationToken, async (req, res) => {
+      try {
+        const email = req.decodedEmail;
+        if (!email) {
+          return res
+            .status(500)
+            .send({ message: "Internal server error: Missing decoded email" });
+        }
+
+        const query = { email: email };
+        const result = await usercollection.findOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
     });
 
     // add laon
@@ -209,7 +226,31 @@ async function run() {
         res.status(500).send({ message: "Server error" });
       }
     });
-
+    //  loan Application get for brower
+    app.get("/myLoan", verificationToken, async (req, res) => {
+      try {
+        const email = req.decodedEmail;
+        console.log(email);
+        const query = { userEmail: email };
+        const result = await loanApplicationCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+    app.get("/applicationDeatail/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        console.log(id);
+        const query = { _id: new ObjectId(id) };
+        const result = await loanApplicationCollection.findOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
     // approve laon application
     app.patch(
       "/loan-applications/:id/approve",
@@ -221,7 +262,31 @@ async function run() {
             { _id: new ObjectId(id) },
             {
               $set: {
-                status: "approved",
+                status: "Approved",
+                approvedAt: new Date(),
+              },
+            }
+          );
+          res.send(result);
+        } catch (error) {
+          console.error(error);
+          res.status(500).send({ message: "Server error" });
+        }
+      }
+    );
+
+    // reject loan application
+    app.patch(
+      "/loan-applications/:id/reject",
+      verificationToken,
+      async (req, res) => {
+        try {
+          const { id } = req.params;
+          const result = await loanApplicationCollection.updateOne(
+            { _id: new ObjectId(id) },
+            {
+              $set: {
+                status: "Rejected",
                 approvedAt: new Date(),
               },
             }
@@ -239,6 +304,19 @@ async function run() {
         const email = req.query.email;
         const result = await loanApplicationCollection
           .find({ Officer_email: email, status: "pending" })
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+    //  approved Loan
+    app.get("/approvedLoan", verificationToken, async (req, res) => {
+      try {
+        const email = req.query.email;
+        const result = await loanApplicationCollection
+          .find({ Officer_email: email, status: "Approved" })
           .toArray();
         res.send(result);
       } catch (error) {
