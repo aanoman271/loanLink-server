@@ -251,6 +251,19 @@ async function run() {
         res.status(500).send({ message: "Server error" });
       }
     });
+
+    // delete Application
+    app.delete("/deleteMyLoan/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const query = { _id: new ObjectId(id) };
+        const result = await loanApplicationCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
     // approve laon application
     app.patch(
       "/loan-applications/:id/approve",
