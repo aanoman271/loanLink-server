@@ -181,7 +181,26 @@ async function run() {
         res.status(500).send({ message: "Server error" });
       }
     });
-
+    // all Loan
+    app.get("/allLoan", async (req, res) => {
+      const result = await addLoanCollection.find().toArray();
+      res.send(result);
+    });
+    // show home
+    app.patch("/showHome/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const query = { _id: new ObjectId(id) };
+        const homeOrNot = req.body;
+        const result = await addLoanCollection.updateOne(query, {
+          $set: homeOrNot,
+        });
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
     // updated laon
     app.patch("/loans/:id", verificationToken, async (req, res) => {
       try {
@@ -212,7 +231,10 @@ async function run() {
 
     app.get("/availableLoans", async (req, res) => {
       try {
-        const result = await addLoanCollection.find().limit(6).toArray();
+        const query = {
+          showOnHome: true,
+        };
+        const result = await addLoanCollection.find(query).limit(6).toArray();
 
         res.send(result);
       } catch (error) {
