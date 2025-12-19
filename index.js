@@ -1,11 +1,13 @@
 const express = require("express");
 const cors = require("cors");
+const Stripe = require("stripe");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 require("dotenv").config();
 // middleware
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 3000;
 
@@ -185,11 +187,21 @@ async function run() {
       }
     });
 
-    app.get("/alllaons", async (req, res) => {
-      const cursor = addLoanCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
+    app.get("/allLoans", async (req, res) => {
+      const size = Number(req.query.size) || 10;
+      const page = Number(req.query.page) || 0;
+
+      const result = await addLoanCollection
+        .find()
+        .limit(size)
+        .skip(size * page)
+        .toArray();
+
+      const totalloan = await addLoanCollection.countDocuments();
+
+      res.send({ loanCollection: result, totalloan });
     });
+
     // laon appplication post
     app.post("/loan-applications", verificationToken, async (req, res) => {
       try {
@@ -230,7 +242,6 @@ async function run() {
     app.get("/myLoan", verificationToken, async (req, res) => {
       try {
         const email = req.decodedEmail;
-        console.log(email);
         const query = { userEmail: email };
         const result = await loanApplicationCollection.find(query).toArray();
         res.send(result);
@@ -288,6 +299,26 @@ async function run() {
       }
     );
 
+    //  paid unPaid
+    app.patch("/paidUnpaid/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const result = await loanApplicationCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              status: "Approved",
+              approvedAt: new Date(),
+            },
+          }
+        );
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
     // reject loan application
     app.patch(
       "/loan-applications/:id/reject",
@@ -335,6 +366,54 @@ async function run() {
       } catch (error) {
         console.error(error);
         res.status(500).send({ message: "Server error" });
+      }
+    });
+    // update paid or not
+    app.patch("/loan/:id/pay", async (req, res) => {
+      const { id } = req.params;
+
+      const result = await loanApplicationCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            pay_status: "paid",
+            paidAt: new Date(),
+          },
+        }
+      );
+
+      res.send(result);
+    });
+
+    // stripe
+    app.post("/create-payment-session", async (req, res) => {
+      try {
+        const { loanId, email } = req.body;
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: "Loan Application Fee",
+                },
+                unit_amount: 1000,
+              },
+              quantity: 1,
+            },
+          ],
+          success_url: `${process.env.CLIENT_URL}/payment-success?loanId=${loanId}`,
+          cancel_url: `${process.env.CLIENT_URL}/payment-cancel`,
+          customer_email: email,
+        });
+
+        res.send({ url: session.url });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Payment session failed" });
       }
     });
 
