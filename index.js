@@ -74,7 +74,26 @@ async function run() {
       const result = await usercollection.insertOne(newUser);
       res.send(result);
     });
+    app.get("/allUser", verificationToken, async (req, res) => {
+      const result = await usercollection.find().toArray();
+      res.send(result);
+    });
 
+    app.patch("/RoleUpdate/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const query = { _id: new ObjectId(id) };
+        const updateData = req.body;
+        console.log(updateData);
+        const result = await usercollection.updateOne(query, {
+          $set: updateData,
+        });
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
     // get user
     app.get("/user", verificationToken, async (req, res) => {
       try {
@@ -376,7 +395,7 @@ async function run() {
         { _id: new ObjectId(id) },
         {
           $set: {
-            pay_status: "paid",
+            status: "paid",
             paidAt: new Date(),
           },
         }
