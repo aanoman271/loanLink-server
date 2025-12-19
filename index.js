@@ -94,6 +94,21 @@ async function run() {
         res.status(500).send({ message: "Server error" });
       }
     });
+    // user suspend
+    app.patch("/suspend-user/:id", verificationToken, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const suspendData = req.body;
+        const query = { _id: new ObjectId(id) };
+        const result = await usercollection.updateOne(query, {
+          $set: suspendData,
+        });
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
     // get user
     app.get("/user", verificationToken, async (req, res) => {
       try {
