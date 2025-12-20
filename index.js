@@ -319,6 +319,16 @@ async function run() {
       }
     });
 
+    // applications
+    app.get("/allApplication", verificationToken, async (req, res) => {
+      try {
+        const result = await loanApplicationCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
     // delete Application
     app.delete("/deleteMyLoan/:id", verificationToken, async (req, res) => {
       try {
