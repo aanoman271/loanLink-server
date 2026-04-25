@@ -8,7 +8,7 @@
 - stripe
 - cookie-parser
 - (Additional: multer for image uploads if implemented)
-
+https://study-mate-246e4.web.app/
 ## Installation & Setup
 
 1. Clone client and server repositories.
