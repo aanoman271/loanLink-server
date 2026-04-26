@@ -152,6 +152,26 @@ async function connectDb() {
     }
   });
 
+  // update user profile
+  app.patch("/update-user", verificationToken, async (req, res) => {
+    try {
+      const email = req.decodedEmail;
+      const { name, image } = req.body;
+      const query = { email: email };
+      const updateDoc = {
+        $set: {
+          name: name,
+          image: image,
+        },
+      };
+      const result = await usercollection.updateOne(query, updateDoc);
+      res.send(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).send({ message: "Server error" });
+    }
+  });
+
   // add laon
   app.post("/manager/addloan", verificationToken, async (req, res) => {
     const addloanData = req.body;
