@@ -32,7 +32,10 @@ app.use(
 app.options("*", cors());
 
 // middleware
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error("❌ STRIPE_SECRET_KEY environment variable is missing!");
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "dummy_key");
 
 const port = process.env.PORT || 3000;
 
@@ -41,14 +44,27 @@ const admin = require("firebase-admin");
 // const serviceAccount = require("./loan-link-firebase-adminsdk-key.json");
 // const serviceAccount = require("./firebase-admin-key.json");
 
-const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
-  "utf8"
-);
-const serviceAccount = JSON.parse(decoded);
+let serviceAccount;
+try {
+  if (!process.env.FB_SERVICE_KEY) {
+    throw new Error("FB_SERVICE_KEY environment variable is missing");
+  }
+  const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
+    "utf8"
+  );
+  serviceAccount = JSON.parse(decoded);
+} catch (error) {
+  console.error("❌ Error parsing FB_SERVICE_KEY:", error.message);
+  // We'll proceed, but Firebase admin will likely fail later if used
+}
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+if (serviceAccount) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+} else {
+  console.error("❌ Firebase Admin could not be initialized due to missing service account");
+}
 
 const verificationToken = async (req, res, next) => {
   const authorization = req.headers.authorization;
