@@ -9,12 +9,16 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      "https://laon-link-microloan-service.vercel.app/",
+      "https://laon-link-microloan-service.vercel.app",
       "http://localhost:3000",
       "http://localhost:5173",
     ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
   })
 );
+
+app.options("*", cors());
 
 require("dotenv").config();
 // middleware
