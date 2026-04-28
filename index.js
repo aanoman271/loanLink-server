@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
@@ -6,21 +7,30 @@ const Stripe = require("stripe");
 
 const app = express();
 app.use(express.json());
+
+const allowedOrigins = [
+  "https://laon-link-microloan-service.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: [
-      "https://laon-link-microloan-service.vercel.app",
-      "http://localhost:3000",
-      "http://localhost:5173",
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error("CORS blocked origin:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
+    optionsSuccessStatus: 200,
   })
 );
 
 app.options("*", cors());
 
-require("dotenv").config();
 // middleware
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -64,6 +74,10 @@ const verificationToken = async (req, res, next) => {
 };
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+if (!process.env.URI_USER_NAME || !process.env.URI_PASSWORD) {
+  console.error("❌ Missing MongoDB credentials in environment variables!");
+}
+
 const uri = `mongodb+srv://${process.env.URI_USER_NAME}:${process.env.URI_PASSWORD}@cluster0.sillvi5.mongodb.net/?appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -74,12 +88,10 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
-const db = client.db("loan_Link");
-const usercollection = db.collection("users");
-const addLoanCollection = db.collection("manager-addLoan");
-const loanApplicationCollection = db.collection("loan_application");
+
 async function run() {
   try {
+    // Connect the client to the server (optional starting in v4.7)
     await client.connect();
     console.log("✅ Successfully connected to MongoDB!");
   } catch (error) {
@@ -87,6 +99,11 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+const db = client.db("loan_Link");
+const usercollection = db.collection("users");
+const addLoanCollection = db.collection("manager-addLoan");
+const loanApplicationCollection = db.collection("loan_application");
 
 // Connect the client to the server	(optional starting in v4.7)
 
@@ -286,8 +303,8 @@ async function connectDb() {
 
       res.send(result);
     } catch (error) {
-      console.error(error);
-      res.status(500).send({ message: "Server error" });
+      console.error("Error in /availableLoans:", error);
+      res.status(500).send({ message: error.message || "Server error" });
     }
   });
 
@@ -343,6 +360,7 @@ async function connectDb() {
       res.send({ paid, unpaid, sumOfAmount })
     }
     catch (error) {
+      console.error("Error in /approvedLoan-count:", error);
       res.status(500).send({ message: error.message || "server error" })
     }
   })
