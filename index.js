@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      "https://loan-link-7ead9.web.app",
+      "https://laon-link-microloan-service.vercel.app/",
       "http://localhost:3000",
       "http://localhost:5173",
     ],
