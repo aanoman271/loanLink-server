@@ -17,11 +17,17 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
+      const allowedOrigins = [
+        "https://laon-link-microloan-service.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+      ];
+
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         console.error("CORS blocked origin:", origin);
-        callback(new Error("Not allowed by CORS"));
+        callback(null, true);
       }
     },
     credentials: true,
@@ -29,13 +35,9 @@ app.use(
   })
 );
 
-app.options("*", cors());
-
+app.options(/.*/, cors());
 // middleware
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error("❌ STRIPE_SECRET_KEY environment variable is missing!");
-}
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "dummy_key");
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 3000;
 
@@ -44,27 +46,14 @@ const admin = require("firebase-admin");
 // const serviceAccount = require("./loan-link-firebase-adminsdk-key.json");
 // const serviceAccount = require("./firebase-admin-key.json");
 
-let serviceAccount;
-try {
-  if (!process.env.FB_SERVICE_KEY) {
-    throw new Error("FB_SERVICE_KEY environment variable is missing");
-  }
-  const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
-    "utf8"
-  );
-  serviceAccount = JSON.parse(decoded);
-} catch (error) {
-  console.error("❌ Error parsing FB_SERVICE_KEY:", error.message);
-  // We'll proceed, but Firebase admin will likely fail later if used
-}
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
+  "utf8"
+);
+const serviceAccount = JSON.parse(decoded);
 
-if (serviceAccount) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-} else {
-  console.error("❌ Firebase Admin could not be initialized due to missing service account");
-}
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 const verificationToken = async (req, res, next) => {
   const authorization = req.headers.authorization;
